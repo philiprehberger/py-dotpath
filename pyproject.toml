@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "philiprehberger-dotpath"
+version = "0.1.0"
+description = "Access and mutate deeply nested dicts using dot-notation paths"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Philip Rehberger" }]
+keywords = ["dict", "dotpath", "nested", "json", "access", "dot-notation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/philiprehberger/py-dotpath"
+Repository = "https://github.com/philiprehberger/py-dotpath"
+Issues = "https://github.com/philiprehberger/py-dotpath/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/philiprehberger_dotpath"]
