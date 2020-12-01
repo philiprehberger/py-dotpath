@@ -66,6 +66,14 @@ unflatten({"a.b.c": 1, "d[0]": 10, "d[1]": 20})
 | `flatten(data, *, separator=".") -> dict` | Flatten nested dict to single level |
 | `unflatten(data, *, separator=".") -> dict` | Restore flattened dict to nested structure |
 
+
+## Development
+
+```bash
+pip install -e .
+python -m pytest tests/ -v
+```
+
 ## License
 
 MIT
