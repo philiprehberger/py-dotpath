@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 (2026-03-16)
+
+- Support wildcards in `set()` and `delete()` (e.g., `set(data, "users[*].active", True)`)
+- Add negative indexing (e.g., `get(data, "users[-1].name")`)
+- Add `pop()` — remove and return value at path
+- Add `merge()` — deep-merge a dict into a nested path
+- Add `search()` — find all paths matching a predicate
+
 ## 0.1.5
 
 - Add basic import test
