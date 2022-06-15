@@ -6,7 +6,7 @@
 
 Access and mutate deeply nested dicts using dot-notation paths.
 
-## Install
+## Installation
 
 ```bash
 pip install philiprehberger-dotpath
