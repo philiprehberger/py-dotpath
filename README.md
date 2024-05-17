@@ -3,6 +3,7 @@
 [![Tests](https://github.com/philiprehberger/py-dotpath/actions/workflows/publish.yml/badge.svg)](https://github.com/philiprehberger/py-dotpath/actions/workflows/publish.yml)
 [![PyPI version](https://img.shields.io/pypi/v/philiprehberger-dotpath.svg)](https://pypi.org/project/philiprehberger-dotpath/)
 [![License](https://img.shields.io/github/license/philiprehberger/py-dotpath)](LICENSE)
+[![Sponsor](https://img.shields.io/badge/sponsor-GitHub%20Sponsors-ec6cb9)](https://github.com/sponsors/philiprehberger)
 
 Access and mutate deeply nested dicts using dot-notation paths.
 
