@@ -3,20 +3,20 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Callable
 
-__all__ = ["get", "set", "delete", "has", "flatten", "unflatten"]
+__all__ = ["get", "set", "delete", "has", "flatten", "unflatten", "pop", "merge", "search"]
 
 _MISSING = object()
 
-_INDEX_RE = re.compile(r"^([^\[]+)\[(\d+|\*)\]$")
+_INDEX_RE = re.compile(r"^([^\[]+)\[(-?\d+|\*)\]$")
 
 
 def _parse_path(path: str) -> list[str | int]:
     """Parse a dot-notation path into a list of keys and indices.
 
     Supports dot notation (``a.b.c``), integer indices (``a[0].b``),
-    and wildcard indices (``a[*].b``).
+    negative indices (``a[-1].b``), and wildcard indices (``a[*].b``).
     """
     parts: list[str | int] = []
     for segment in path.split("."):
@@ -59,6 +59,107 @@ def _resolve(data: Any, parts: list[str | int], *, collect: bool = False) -> Any
     return current
 
 
+def _walk_wildcard_set(
+    data: Any,
+    parts: list[str | int],
+    idx: int,
+    value: Any,
+) -> None:
+    """Recursively walk to wildcards in *parts* and set *value* on each match."""
+    current: Any = data
+    for i in range(idx, len(parts) - 1):
+        part = parts[i]
+        if part == "*":
+            if not isinstance(current, list):
+                raise KeyError("Wildcard on non-list value")
+            for item in current:
+                _walk_wildcard_set(item, parts, i + 1, value)
+            return
+        if isinstance(part, int):
+            try:
+                current = current[part]
+            except (IndexError, TypeError) as exc:
+                raise KeyError(part) from exc
+        else:
+            if isinstance(current, dict):
+                if part not in current:
+                    current[part] = {}
+                current = current[part]
+            else:
+                raise KeyError(part)
+
+    last = parts[-1]
+    if last == "*":
+        if not isinstance(current, list):
+            raise KeyError("Wildcard on non-list value")
+        for j in range(len(current)):
+            current[j] = value
+    elif isinstance(last, int):
+        try:
+            current[last] = value
+        except (IndexError, TypeError) as exc:
+            raise KeyError(last) from exc
+    else:
+        if isinstance(current, dict):
+            current[last] = value
+        elif isinstance(current, list):
+            for item in current:
+                if isinstance(item, dict):
+                    item[last] = value
+        else:
+            raise KeyError(last)
+
+
+def _walk_wildcard_delete(
+    data: Any,
+    parts: list[str | int],
+    idx: int,
+) -> None:
+    """Recursively walk to wildcards in *parts* and delete the final key."""
+    current: Any = data
+    for i in range(idx, len(parts) - 1):
+        part = parts[i]
+        if part == "*":
+            if not isinstance(current, list):
+                raise KeyError("Wildcard on non-list value")
+            for item in current:
+                _walk_wildcard_delete(item, parts, i + 1)
+            return
+        if isinstance(part, int):
+            try:
+                current = current[part]
+            except (IndexError, TypeError) as exc:
+                raise KeyError(part) from exc
+        else:
+            if not isinstance(current, dict) or part not in current:
+                raise KeyError(part)
+            current = current[part]
+
+    last = parts[-1]
+    if last == "*":
+        if not isinstance(current, list):
+            raise KeyError("Wildcard on non-list value")
+        current.clear()
+    elif isinstance(last, int):
+        try:
+            del current[last]
+        except (IndexError, TypeError) as exc:
+            raise KeyError(last) from exc
+    else:
+        if not isinstance(current, dict) or last not in current:
+            raise KeyError(last)
+        del current[last]
+
+
+def _deep_merge(target: dict[str, Any], source: dict[str, Any]) -> None:
+    """Recursively merge *source* into *target*."""
+    for key, val in source.items():
+        if key in target and isinstance(target[key], dict) and isinstance(val, dict):
+            _deep_merge(target[key], val)
+        else:
+            target[key] = val
+
+
 # ------------------------------------------------------------------
 # Public API
 # ------------------------------------------------------------------
@@ -73,6 +174,7 @@ def get(data: dict[str, Any], path: str, *, default: Any = _MISSING) -> Any:
         The nested dictionary to query.
     path:
         Dot-notation path, e.g. ``"users[0].name"`` or ``"users[*].email"``.
+        Negative indices are supported, e.g. ``"users[-1].name"``.
     default:
         Value to return when the path does not exist.  If omitted a
         :class:`KeyError` is raised for missing paths.
@@ -91,8 +193,15 @@ def set(data: dict[str, Any], path: str, value: Any) -> None:
 
     Integer indices are supported for existing lists, but new lists are
     **not** auto-created — intermediate containers are always dicts.
+
+    Wildcards are supported: ``set(data, "users[*].active", True)``
+    sets the field on every item in the list.
     """
     parts = _parse_path(path)
+    if "*" in parts:
+        _walk_wildcard_set(data, parts, 0, value)
+        return
+
     current: Any = data
     for part in parts[:-1]:
         if isinstance(part, int):
@@ -100,8 +209,6 @@ def set(data: dict[str, Any], path: str, value: Any) -> None:
                 current = current[part]
             except (IndexError, TypeError) as exc:
                 raise KeyError(part) from exc
-        elif part == "*":
-            raise ValueError("Wildcard '*' is not supported in set()")
         else:
             if part not in current or not isinstance(current.get(part), dict):
                 current[part] = {}
@@ -113,8 +220,6 @@ def set(data: dict[str, Any], path: str, value: Any) -> None:
             current[last] = value
         except (IndexError, TypeError) as exc:
             raise KeyError(last) from exc
-    elif last == "*":
-        raise ValueError("Wildcard '*' is not supported in set()")
     else:
         current[last] = value
 
@@ -123,8 +228,15 @@ def delete(data: dict[str, Any], path: str) -> None:
     """Delete the key at *path*.
 
     Raises :class:`KeyError` if the path does not exist.
+
+    Wildcards are supported: ``delete(data, "users[*].temp")``
+    deletes the field from every item in the list.
     """
     parts = _parse_path(path)
+    if "*" in parts:
+        _walk_wildcard_delete(data, parts, 0)
+        return
+
     current: Any = data
     for part in parts[:-1]:
         if isinstance(part, int):
@@ -132,8 +244,6 @@ def delete(data: dict[str, Any], path: str) -> None:
                 current = current[part]
             except (IndexError, TypeError) as exc:
                 raise KeyError(part) from exc
-        elif part == "*":
-            raise ValueError("Wildcard '*' is not supported in delete()")
         else:
             if not isinstance(current, dict) or part not in current:
                 raise KeyError(part)
@@ -145,8 +255,6 @@ def delete(data: dict[str, Any], path: str) -> None:
             del current[last]
         except (IndexError, TypeError) as exc:
             raise KeyError(last) from exc
-    elif last == "*":
-        raise ValueError("Wildcard '*' is not supported in delete()")
     else:
         if not isinstance(current, dict) or last not in current:
             raise KeyError(last)
@@ -161,6 +269,104 @@ def has(data: dict[str, Any], path: str) -> bool:
         return True
     except KeyError:
         return False
+
+
+def pop(data: dict[str, Any], path: str, *, default: Any = _MISSING) -> Any:
+    """Remove and return the value at *path*.  Like :meth:`dict.pop`.
+
+    Parameters
+    ----------
+    data:
+        The nested dictionary to mutate.
+    path:
+        Dot-notation path to the value to remove.
+    default:
+        If provided and *path* does not exist, return *default* instead
+        of raising :class:`KeyError`.
+    """
+    parts = _parse_path(path)
+    current: Any = data
+    try:
+        for part in parts[:-1]:
+            if isinstance(part, int):
+                try:
+                    current = current[part]
+                except (IndexError, TypeError) as exc:
+                    raise KeyError(part) from exc
+            elif part == "*":
+                raise KeyError("Wildcard '*' is not supported in pop()")
+            else:
+                if not isinstance(current, dict) or part not in current:
+                    raise KeyError(part)
+                current = current[part]
+
+        last = parts[-1]
+        if isinstance(last, int):
+            try:
+                value = current[last]
+                del current[last]
+                return value
+            except (IndexError, TypeError) as exc:
+                raise KeyError(last) from exc
+        elif last == "*":
+            raise KeyError("Wildcard '*' is not supported in pop()")
+        else:
+            if not isinstance(current, dict) or last not in current:
+                raise KeyError(last)
+            return current.pop(last)
+    except KeyError:
+        if default is _MISSING:
+            raise
+        return default
+
+
+def merge(data: dict[str, Any], path: str, value: dict[str, Any]) -> None:
+    """Deep-merge *value* into the dict at *path*.
+
+    If *path* does not exist yet, it is created and set to *value*.
+    If the existing value at *path* is a dict, *value* is recursively
+    merged into it.
+    """
+    parts = _parse_path(path)
+    try:
+        existing = _resolve(data, parts, collect=False)
+    except KeyError:
+        existing = None
+
+    if isinstance(existing, dict):
+        _deep_merge(existing, value)
+    else:
+        set(data, path, value)
+
+
+def search(data: dict[str, Any], predicate: Callable[[Any], bool]) -> list[str]:
+    """Find all dot-paths where ``predicate(value)`` is ``True``.
+
+    Recursively walks *data* (including nested dicts and lists) and
+    returns a list of dot-notation path strings for every leaf or
+    sub-tree where the predicate matches.
+
+    >>> search({"a": 1, "b": {"c": 2}}, lambda v: isinstance(v, int) and v > 1)
+    ['b.c']
+    """
+    results: list[str] = []
+
+    def _walk(obj: Any, prefix: str) -> None:
+        if isinstance(obj, dict):
+            for key, val in obj.items():
+                new_key = f"{prefix}.{key}" if prefix else key
+                if predicate(val):
+                    results.append(new_key)
+                _walk(val, new_key)
+        elif isinstance(obj, list):
+            for i, val in enumerate(obj):
+                new_key = f"{prefix}[{i}]"
+                if predicate(val):
+                    results.append(new_key)
+                _walk(val, new_key)
+
+    _walk(data, "")
+    return results
 
 
 def flatten(data: dict[str, Any], *, separator: str = ".") -> dict[str, Any]:
