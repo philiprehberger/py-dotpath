@@ -24,9 +24,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/philiprehberger/py-dotpath"
+Homepage = "https://github.com/philiprehberger/py-dotpath#readme"
 Repository = "https://github.com/philiprehberger/py-dotpath"
 Issues = "https://github.com/philiprehberger/py-dotpath/issues"
+Changelog = "https://github.com/philiprehberger/py-dotpath/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/philiprehberger_dotpath"]
