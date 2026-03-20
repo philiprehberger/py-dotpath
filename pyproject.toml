@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "philiprehberger-dotpath"
-version = "0.2.1"
+version = "0.2.2"
 description = "Access and mutate deeply nested dicts using dot-notation paths"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [{ name = "Philip Rehberger" }]
-keywords = ["dict", "dotpath", "nested", "json", "access", "dot-notation"]
+keywords = ["dict", "dotpath", "nested", "json", "dot-notation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
