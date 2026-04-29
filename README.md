@@ -15,7 +15,9 @@ pip install philiprehberger-dotpath
 ## Usage
 
 ```python
-from philiprehberger_dotpath import get, set, has, delete, flatten, unflatten, pop, merge, search
+from philiprehberger_dotpath import (
+    get, set, has, delete, flatten, unflatten, pop, merge, paths, search,
+)
 
 data = {"users": [{"name": "Alice", "email": "alice@example.com"}]}
 
@@ -86,6 +88,22 @@ search(data, lambda v: isinstance(v, int) and v > 5)
 # ["b.d[0]", "b.d[1]"]
 ```
 
+### List All Paths
+
+`paths()` is a lazy iterator over every leaf path — the keys of `flatten()`
+without materialising the dict.
+
+```python
+data = {"a": {"b": 1}, "c": [10, 20]}
+
+list(paths(data))
+# ["a.b", "c[0]", "c[1]"]
+
+# Useful for streaming over very large structures
+for p in paths(huge_config):
+    print(p)
+```
+
 ### Flatten and Unflatten
 
 ```python
@@ -109,6 +127,7 @@ unflatten({"a.b.c": 1, "d[0]": 10, "d[1]": 20})
 | `pop(data, path, *, default=_MISSING)` | Remove and return value at path; like `dict.pop()` |
 | `merge(data, path, value)` | Deep-merge a dict into the dict at path |
 | `search(data, predicate) -> list[str]` | Find all dot-paths where `predicate(value)` is `True` |
+| `paths(data, *, separator=".") -> Iterator[str]` | Lazy iterator over every leaf path |
 | `flatten(data, *, separator=".") -> dict` | Flatten nested dict to single level |
 | `unflatten(data, *, separator=".") -> dict` | Restore flattened dict to nested structure |
 

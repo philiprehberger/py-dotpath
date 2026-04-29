@@ -1,15 +1,25 @@
 # Changelog
 
+## 0.3.0 (2026-04-29)
+
+- Add `paths()` — lazy iterator over every leaf path (companion to `flatten()`)
+- Fix `set()` clobbering existing lists when traversing through them via dot path (e.g. `set(data, "users[0].name", x)` previously overwrote `users` with `{}`)
+- Replace import-only stub with real test suite covering get/set/has/delete/pop/merge/search/flatten/unflatten/paths and the regression
+- Clean up malformed CHANGELOG history (collapsed `0.2.1` and `0.2.2` entries split out)
+
 ## 0.2.3 (2026-03-31)
 
 - Standardize README to 3-badge format with emoji Support section
 - Update CI checkout action to v5 for Node.js 24 compatibility
 - Add GitHub issue templates, dependabot config, and PR template
+
 ## 0.2.2
 
 - Trim keywords to match pyproject template guide
 
-## 0.2.1- Add pytest and mypy tool configuration to pyproject.toml
+## 0.2.1
+
+- Add pytest and mypy tool configuration to pyproject.toml
 
 ## 0.2.0 (2026-03-16)
 

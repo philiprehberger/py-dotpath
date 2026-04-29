@@ -3,9 +3,20 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
-__all__ = ["get", "set", "delete", "has", "flatten", "unflatten", "pop", "merge", "search"]
+__all__ = [
+    "get",
+    "set",
+    "delete",
+    "has",
+    "flatten",
+    "unflatten",
+    "pop",
+    "merge",
+    "paths",
+    "search",
+]
 
 _MISSING = object()
 
@@ -210,7 +221,8 @@ def set(data: dict[str, Any], path: str, value: Any) -> None:
             except (IndexError, TypeError) as exc:
                 raise KeyError(part) from exc
         else:
-            if part not in current or not isinstance(current.get(part), dict):
+            existing = current.get(part) if isinstance(current, dict) else None
+            if part not in current or not isinstance(existing, (dict, list)):
                 current[part] = {}
             current = current[part]
 
@@ -367,6 +379,30 @@ def search(data: dict[str, Any], predicate: Callable[[Any], bool]) -> list[str]:
 
     _walk(data, "")
     return results
+
+
+def paths(data: dict[str, Any], *, separator: str = ".") -> Iterator[str]:
+    """Yield every leaf path in *data* in dot/bracket notation.
+
+    Companion to :func:`flatten` — paths are produced lazily so callers can
+    iterate without materialising the full flattened dict.
+
+    >>> list(paths({"a": {"b": 1}, "c": [10, 20]}))
+    ['a.b', 'c[0]', 'c[1]']
+    """
+
+    def _walk(obj: Any, prefix: str) -> Iterator[str]:
+        if isinstance(obj, dict):
+            for key, val in obj.items():
+                new_key = f"{prefix}{separator}{key}" if prefix else key
+                yield from _walk(val, new_key)
+        elif isinstance(obj, list):
+            for i, val in enumerate(obj):
+                yield from _walk(val, f"{prefix}[{i}]")
+        else:
+            yield prefix
+
+    yield from _walk(data, "")
 
 
 def flatten(data: dict[str, Any], *, separator: str = ".") -> dict[str, Any]:
