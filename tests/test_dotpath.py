@@ -5,10 +5,12 @@ from __future__ import annotations
 import pytest
 
 from philiprehberger_dotpath import (
+    count,
     delete,
     flatten,
     get,
     has,
+    keys,
     merge,
     paths,
     pop,
@@ -145,3 +147,33 @@ class TestPaths:
     def test_matches_flatten_keys(self) -> None:
         data = {"a": {"b": [1, 2]}, "c": 3}
         assert sorted(paths(data)) == sorted(flatten(data).keys())
+
+
+class TestKeys:
+    def test_nested_dot_paths(self) -> None:
+        assert sorted(keys({"a": {"b": 1}, "c": 2})) == ["a.b", "c"]
+
+    def test_depth_one_returns_top_level(self) -> None:
+        assert sorted(keys({"a": {"b": 1}, "c": 2}, depth=1)) == ["a", "c"]
+
+    def test_empty_dict(self) -> None:
+        assert keys({}) == []
+
+    def test_list_indices(self) -> None:
+        result = keys({"users": [{"id": 1}, {"id": 2}]})
+        assert "users.0.id" in result
+        assert "users.1.id" in result
+
+
+class TestCount:
+    def test_nested_dict(self) -> None:
+        assert count({"a": 1, "b": {"c": 2, "d": 3}}) == 3
+
+    def test_list(self) -> None:
+        assert count([1, 2, 3]) == 3
+
+    def test_empty_dict(self) -> None:
+        assert count({}) == 0
+
+    def test_empty_container_no_leaves(self) -> None:
+        assert count({"a": []}) == 0

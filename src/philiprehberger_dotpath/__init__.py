@@ -16,6 +16,8 @@ __all__ = [
     "merge",
     "paths",
     "search",
+    "keys",
+    "count",
 ]
 
 _MISSING = object()
@@ -480,3 +482,54 @@ def unflatten(data: dict[str, Any], *, separator: str = ".") -> dict[str, Any]:
             current[last] = value
 
     return result
+
+
+def keys(data: dict | list, *, depth: int | None = None) -> list[str]:
+    """Return all dot-paths in *data*.
+
+    Args:
+        depth: Maximum nesting depth to traverse. None means unlimited.
+            Depth 1 returns only the top-level keys.
+
+    Examples:
+        keys({"a": {"b": 1}, "c": 2}) -> ["a.b", "c"]
+        keys({"a": {"b": 1}, "c": 2}, depth=1) -> ["a", "c"]
+    """
+    results: list[str] = []
+
+    def _walk(obj: Any, prefix: str, level: int) -> None:
+        if isinstance(obj, dict):
+            for key in obj:
+                new_key = f"{prefix}.{key}" if prefix else str(key)
+                val = obj[key]
+                if (depth is not None and level >= depth) or not isinstance(
+                    val, (dict, list)
+                ):
+                    results.append(new_key)
+                else:
+                    _walk(val, new_key, level + 1)
+        elif isinstance(obj, list):
+            for i, val in enumerate(obj):
+                new_key = f"{prefix}.{i}" if prefix else str(i)
+                if (depth is not None and level >= depth) or not isinstance(
+                    val, (dict, list)
+                ):
+                    results.append(new_key)
+                else:
+                    _walk(val, new_key, level + 1)
+
+    _walk(data, "", 1)
+    return results
+
+
+def count(data: dict | list) -> int:
+    """Return total leaf count (non-dict, non-list values) in *data*."""
+
+    def _walk(obj: Any) -> int:
+        if isinstance(obj, dict):
+            return sum(_walk(v) for v in obj.values())
+        if isinstance(obj, list):
+            return sum(_walk(item) for item in obj)
+        return 1
+
+    return _walk(data)

@@ -116,6 +116,18 @@ unflatten({"a.b.c": 1, "d[0]": 10, "d[1]": 20})
 # {"a": {"b": {"c": 1}}, "d": [10, 20]}
 ```
 
+### Listing keys and counting leaves
+
+```python
+data = {"a": {"b": 1}, "c": 2}
+
+keys(data)            # ["a.b", "c"]
+keys(data, depth=1)   # ["a", "c"]
+
+count({"a": 1, "b": {"c": 2, "d": 3}})  # 3
+count({"a": []})                         # 0  (empty containers don't count)
+```
+
 ## API
 
 | Function | Description |
@@ -130,6 +142,8 @@ unflatten({"a.b.c": 1, "d[0]": 10, "d[1]": 20})
 | `paths(data, *, separator=".") -> Iterator[str]` | Lazy iterator over every leaf path |
 | `flatten(data, *, separator=".") -> dict` | Flatten nested dict to single level |
 | `unflatten(data, *, separator=".") -> dict` | Restore flattened dict to nested structure |
+| `keys(data, depth=None) -> list[str]` | List all dot-paths, optionally capped at *depth* |
+| `count(data) -> int` | Total leaf count (non-dict, non-list values) |
 
 ## Development
 

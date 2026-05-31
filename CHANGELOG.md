@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0 (2026-05-30)
+
+- Add `keys()` returning all dot-paths in a nested structure (with optional depth cap)
+- Add `count()` for total leaf count
+
 ## 0.3.0 (2026-04-29)
 
 - Add `paths()` — lazy iterator over every leaf path (companion to `flatten()`)
